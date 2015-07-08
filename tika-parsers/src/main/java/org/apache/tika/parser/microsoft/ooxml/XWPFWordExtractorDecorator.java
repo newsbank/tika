@@ -349,27 +349,36 @@ public class XWPFWordExtractorDecorator extends AbstractOOXMLExtractor {
         xhtml.characters(run.getContent().getText());
     }
 
-    private void extractTable(XWPFTable table, XWPFListManager listManager,
-                              XHTMLContentHandler xhtml)
-            throws SAXException, XmlException, IOException {
-        xhtml.startElement("table");
-        xhtml.startElement("tbody");
-        for (XWPFTableRow row : table.getRows()) {
-            xhtml.startElement("tr");
-            for (ICell cell : row.getTableICells()) {
-                xhtml.startElement("td");
-                if (cell instanceof XWPFTableCell) {
-                    extractIBodyText((XWPFTableCell) cell, listManager, xhtml);
-                } else if (cell instanceof XWPFSDTCell) {
-                    xhtml.characters(((XWPFSDTCell) cell).getContent().getText());
-                }
-                xhtml.endElement("td");
-            }
-            xhtml.endElement("tr");
-        }
-        xhtml.endElement("tbody");
-        xhtml.endElement("table");
-    }
+	private void extractTable(XWPFTable table, XWPFListManager listManager, XHTMLContentHandler xhtml)
+			throws SAXException, XmlException, IOException {
+		
+		xhtml.startElement("table");
+		xhtml.startElement("tbody");
+		for (XWPFTableRow row : table.getRows()) {
+			xhtml.startElement("tr");
+			for (ICell cell : row.getTableICells()) {
+				if (cell instanceof XWPFTableCell) {
+					AttributesImpl attributes = new AttributesImpl();
+					XWPFTableCell xwpfTableCell = (XWPFTableCell) cell;
+					CTTcPr ctTcPr = xwpfTableCell.getCTTc().getTcPr();
+					if (ctTcPr != null && ctTcPr.getGridSpan() != null) {
+						String colSpan = ctTcPr.getGridSpan().getVal().toString();
+						attributes.addAttribute("", "colspan", "colspan", "CDATA", colSpan);
+					}
+					xhtml.startElement("td", attributes);
+					extractIBodyText(xwpfTableCell, listManager, xhtml);
+				} else if (cell instanceof XWPFSDTCell) {
+					xhtml.startElement("td");
+					xhtml.characters(((XWPFSDTCell) cell).getContent().getText());
+				}
+				xhtml.endElement("td");
+			}
+			xhtml.endElement("tr");
+		}
+		xhtml.endElement("tbody");
+		xhtml.endElement("table");
+	}
+
 
     private void extractFooters(
             XHTMLContentHandler xhtml, XWPFHeaderFooterPolicy hfPolicy,
